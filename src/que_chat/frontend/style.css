@@ -1,0 +1,135 @@
+html {
+    height: 100%;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    background-color: #181A21;
+    margin: 0;
+    min-height: 100vh;
+}
+
+.banner_character {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    width: 100%;
+    flex-shrink: 0;
+    background-color: none;
+    padding: 10px;
+    box-sizing: border-box;
+    gap: 15px;
+}
+
+.channel_avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background-color: #4A90E2;
+    flex-shrink: 0;
+}
+
+.channel_title {
+    display: flex;
+    justify-content: flex-start; 
+    align-items: center;
+    background-color: #4A90E2;
+    width: auto;
+    flex-shrink: 0;
+    padding: 10px 15px;
+    box-sizing: border-box;
+    color: white;
+    font-size: 18px;
+    font-weight: bold;
+    border-radius: 8px;
+}
+
+.message_history {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
+
+.message_received, .message_send {
+    padding: 10px 15px;
+    margin-bottom: 10px;
+    border-radius: 10px;
+    max-width: 70%;
+    word-wrap: break-word;
+}
+
+.message_received {
+    background-color: #2A2D36;
+    color: white;
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+}
+
+.message_send {
+    background-color: #4A90E2;
+    color: white;
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+}
+
+.chat_input_arena {
+    display: flex;
+    justify-content: start;
+    flex-shrink: 0;
+    width: 100%;
+    box-sizing: border-box;
+    background-color: #1E2028;
+    border-top: 1px solid #2A2D36;
+}
+
+.input_arena {
+    display: flex;
+    width: 100%;
+    gap: 10px;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+.input_arena input {
+    flex: 1;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 8px;
+    background-color: #2A2D36;
+    color: white;
+    outline: none;
+    font-size: 14px;
+}
+
+.input_arena input::placeholder {
+    color: #6A6F7D;
+}
+
+.input_arena input:focus {
+    background-color: #323640;
+}
+
+.input_arena button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    background-color: #4A90E2;
+    color: white;
+    cursor: pointer;
+    flex-shrink: 0;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.input_arena button:hover {
+    background-color: #357ABD;
+}
+
+.input_arena button::after {
+    content: "➤";
+    font-size: 16px;
+}

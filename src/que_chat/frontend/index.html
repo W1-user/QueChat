@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style.css">
     <script src="script.js"></script>
-    <title>Document</title>
+    <title>QueChat</title>
 </head>
 <body>
 
@@ -14,15 +14,14 @@
         <div class="channel_title"></div>
     </div>
 
-    <div class="message_history">
-        <div class="message_received"></div>
-        <div class="message_send"></div>
+    <div class="message_history" id="messageHistory">
+        <!-- All message -->
     </div>
 
     <div class="chat_input_arena">
         <div class="input_arena">
-            <input type="text", placeholder="Напишите сообщение...">
-            <button class="send_message"></button>
+            <input type="text" id="messageInput" placeholder="Напишите сообщение...">
+            <button class="send_message" id="sendBtn"></button>
         </div>
     </div>
 

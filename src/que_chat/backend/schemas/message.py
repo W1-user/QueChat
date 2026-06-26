@@ -4,17 +4,18 @@ from typing import Optional
 
 
 class MessageBase(BaseModel):
-    username: Optional[str]
-    text: Optional[str]
+    username: str
+    text: str
 
 
 class MessageCreate(MessageBase):
-    text: Optional[str] = Field(max_length=2000)
+    timestamp: Optional[datetime] = None
 
 
 class Message(MessageCreate):
-    id: Optional[int]
-    timestamp: Optional[datetime]
+    id: int
+    timestamp: Optional[datetime] = None
+    is_deleted: bool = False
 
     class Config:
         from_attributes = True

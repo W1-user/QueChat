@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 class DatabaseSettings(BaseModel):
     engine: Optional[str] = os.getenv("ENGINE")
-    echo: Optional[bool] = True
+    echo: Optional[bool] = False
     eoc: Optional[bool] = False
 
 class FastApiSettings(BaseModel):

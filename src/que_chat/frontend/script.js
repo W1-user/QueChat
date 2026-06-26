@@ -1,10 +1,12 @@
 const WS_URL = "ws://localhost:8000/ws";
-const API_URL = "http://localhost:8000/messages";
+const API_URL = "http://localhost:8000";
 
 const messageHistory = document.getElementById("messageHistory");
 const messageInput = document.getElementById("messageInput");
 const sendBtn = document.getElementById("sendBtn");
 const channelTitle = document.querySelector(".channel_title")
+const usernameInput = document.getElementById("usernameInput")
+const sendUsername = document.getElementById("sendUsername")
 
 let socket = null;
 let isConnected = false;
@@ -23,19 +25,103 @@ function getUsername() {
         return savedUsername;
     }
 
-    const newUsername = prompt("Your username:", `User_${Math.floor(Math.random() * 10000)}`);
-    if (newUsername && newUsername.trim()) {
-        return newUsername.trim();
-    }
     return `User_${Math.floor(Math.random() * 10000)}`;
 }
 
-function setUsername(newUsername) {
+async function setUsername(newUsername) {
+
     if (newUsername && newUsername.trim()) {
         USERNAME = newUsername.trim();
         localStorage.setItem("quechat_username", USERNAME);
-        updateUserInterface();    
+        try {
+            const response = await fetch(`${API_URL}/profile/create/${newUsername}`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`)
+            }
+            updateUserInterface();  
+            showNotification(`Имя пользователя изменено на: ${USERNAME}`, "info");
+            showUsernameDisplay();
+
+        } catch (error) {
+            console.error(`Error creating profile - ${error}`);
+            showNotification(`Ошибка при создании профиля`, "error");
+        }
     }
+}
+
+function showUsernameDisplay() {
+    usernameInput.style.display = "none";
+    sendUsername.style.display = "none";
+
+    const oldDisplay = document.getElementById("usernameDisplay");
+    if (oldDisplay) {
+        oldDisplay.remove();
+    }
+
+    const usernameContainer = usernameInput.parentElement;
+    const usernameDisplay = document.createElement("div");
+
+    usernameDisplay.id = "usernameDisplay";
+    usernameDisplay.textContent = USERNAME;
+    usernameDisplay.style.cssText = `
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-left: auto;
+        flex-shrink: 0;
+    `;
+
+    const nameSpan = document.createElement("div");
+    nameSpan.textContent = USERNAME;
+    nameSpan.style.cssText = `
+        color: white;
+        font-size: 16px;
+        padding: 8px 15px;
+        background-color: #2A2D36;
+        border-radius: 8px;
+        font-weight: bold;
+        color: #4A90E2;
+        border: 1px solid #4A90E2;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    `;
+
+    const changeBtn = document.createElement("button");
+    changeBtn.textContent = "✏️";
+    changeBtn.style.cssText = `
+        padding: 8px 15px;
+        border: none;
+        border-radius: 8px;
+        background-color: #4A90E2;
+        color: white;
+        cursor: pointer;
+        content: none;
+        font-size: 14px;
+        transition: background-color 0.2s;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    `;
+
+    changeBtn.onmouseover = () => changeBtn.style.background = "#357ABD";
+    changeBtn.onmouseout = () => changeBtn.style.background = "#4A90E2";
+
+    changeBtn.onclick = function() {
+        usernameInput.style.display = "block";
+        sendUsername.style.display = "block";
+
+        usernameInput.value = USERNAME;
+        usernameInput.focus();
+        usernameDisplay.remove();
+    };
+
+    usernameDisplay.appendChild(nameSpan);
+    usernameDisplay.appendChild(changeBtn);
+    usernameContainer.appendChild(usernameDisplay);
+
 }
 
 function updateUserInterface() {
@@ -46,7 +132,7 @@ function updateUserInterface() {
 
 function initWebSocket() {
     try {
-        socket = new WebSocket(WS_URL),
+        socket = new WebSocket(WS_URL);
 
         socket.onopen = handleWebSocketOpen;
         socket.onmessage = handleWebSocketMessage;
@@ -81,12 +167,12 @@ function handleWebSocketMessage(event) {
     }
 }
 
-function handleWebSocketOnClose(event) {
+function handleWebSocketClose(event) {
     isConnected = false;
     attemptReconnect();
 }
 
-function handleWebSocketOnError(error) {
+function handleWebSocketError(error) {
     console.log(`ERROR - ${error}`)
 }
 
@@ -149,7 +235,7 @@ function createMessageElement(message) {
 
     const timeDiv = document.createElement("div");
     timeDiv.className = "message-time";
-    timeDiv.style.cssText = "font-size: 10px; color: #000000; margin-top: 4px;";
+    timeDiv.style.cssText = "font-size: 10px; color: #000000; margin-top: 4px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;";
     if (message.timestamp) {
         const date = new Date(message.timestamp)
         timeDiv.textContent = date.toLocaleTimeString("ru-RU", {
@@ -171,7 +257,7 @@ async function loadMessageHistory() {
     try {
         console.log("Load message history in database...");
 
-        const response = await fetch(`${API_URL}/history`);
+        const response = await fetch(`${API_URL}/messages/history`);
 
         if (!response.ok) {
             throw new Error(`HTTP error! Status: ${response.status}`)
@@ -229,7 +315,7 @@ async function sendMessage() {
     messageInput.focus();
 
     try {
-        const response = await fetch(API_URL, {
+        const response = await fetch(`${API_URL}/messages`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -284,6 +370,7 @@ function showNotification(message, type = "info") {
         box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         max-width: 80%;
         text-align: center;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     `;
     notification.textContent = message;
     document.body.appendChild(notification);
@@ -312,6 +399,10 @@ function addAnimationStyles() {
         @keyframes fadeInUp {
             from { opacity: 0; transform: translateX(-50%) translateY(20px); }
             to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+        
+        * {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
         }
         
         .message_received {
@@ -344,6 +435,7 @@ function addAnimationStyles() {
             flex-shrink: 0;
             padding: 0px 0px 10px 0px;
             font-size: 12px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
         .message_send .nickname {
@@ -361,11 +453,31 @@ function addAnimationStyles() {
 
 function setupEventListeners () {
     sendBtn.addEventListener("click", sendMessage);
+    sendUsername.addEventListener("click", function () {
+        let newUsername = usernameInput.value.trim()
+        if (newUsername) {
+            setUsername(newUsername);
+        } else {
+            showNotification("Введите имя пользователя!", "error");
+        }
+    })
 
     messageInput.addEventListener("keypress", (event) => {
         if (event.key === "Enter" && !event.shiftKey) {
             event.preventDefault();
             sendMessage();
+        }
+    });
+
+    usernameInput.addEventListener("keypress", (event) => {
+        if (event.key === "Enter" && !event.shiftKey) {
+            let newUsername = usernameInput.value.trim()
+            event.preventDefault();
+            if (newUsername) {
+                setUsername(newUsername);
+            } else {
+                showNotification("Введите имя пользователя!", "error");
+            }
         }
     });
     
@@ -374,7 +486,15 @@ function setupEventListeners () {
     });
 
     messageInput.addEventListener("blur", () => {
-        messageInput.style.backgroundColor = "2A2D36";
+        messageInput.style.backgroundColor = "#2A2D36";
+    });
+
+    usernameInput.addEventListener("focus", () => {
+        usernameInput.style.backgroundColor = "#323640";
+    });
+
+    usernameInput.addEventListener("blur", () => {
+        usernameInput.style.backgroundColor = "#2A2D36";
     });
 
 }

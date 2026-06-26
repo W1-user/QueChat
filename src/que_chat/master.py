@@ -5,6 +5,7 @@ from fastapi import FastAPI, HTTPException, status, WebSocket, WebSocketDisconne
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import desc, select
 from que_chat.backend.schemas import message
+from que_chat.backend.schemas.user import ProfileBase
 from que_chat.backend.dependencies import sessionDep
 from que_chat.backend.models.user import User
 from que_chat.backend.models.message import Message
@@ -164,6 +165,59 @@ async def get_message_history(
     except Exception as e:
         logger.error(f"ERROR! - {e}")
         return []
+    
+# @app.post("/profile/check/{username}", response_model=ProfileBase)
+# async def check_user(
+#     session: sessionDegp,
+#     username: str,
+# ):
+    
+#     stmt = select(User).where(User.username == username)
+#     result = await session.execute(stmt)
+#     existing_user = result.scalar_one_or_none()
+
+#     return {
+#         "exists": existing_user is not None,
+#         "username": username
+#     }
+
+@app.post("/profile/create/{username}", response_model=ProfileBase)
+async def create_user(
+    session: sessionDep,
+    username: str,
+):
+
+    stmt = select(User).where(User.username == username)
+    result = await session.execute(stmt)
+    existing_user = result.scalar_one_or_none()
+
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"User with username '{username}' already exists"
+        )
+    
+    new_user = User(
+        username=username,
+        timestamp=datetime.utcnow(),
+    )
+
+    logger.info(f"Был создан новый аккаунт - {username}")
+
+    try:
+        session.add(new_user)
+        await session.commit()
+        await session.refresh(new_user)
+
+        return new_user
+    
+    except Exception as e:
+        await session.rollback()
+        logger.error(f"Ошибка создания пользователя: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):

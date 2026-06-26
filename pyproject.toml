@@ -24,6 +24,9 @@ dependencies = [
 [tool.poetry]
 packages = [{include = "que_chat", from = "src"}]
 
+[tool.poetry.requires-plugins]
+poetry-plugin-export = ">=1.8.0"
+
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"

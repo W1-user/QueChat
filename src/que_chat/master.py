@@ -1,10 +1,16 @@
-from fastapi import FastAPI, HTTPException, status, WebSocket, WebSocketDisconnect
-from src.que_chat.backend.schemas import message
-from src.que_chat.backend.dependencies import sessionDep
-from src.que_chat.backend.models.user import User
-from src.que_chat.backend.models.message import Message
+from contextlib import asynccontextmanager
+from datetime import datetime
 
-from config import settings
+from fastapi import FastAPI, HTTPException, status, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import desc, select
+from que_chat.backend.schemas import message
+from que_chat.backend.dependencies import sessionDep
+from que_chat.backend.models.user import User
+from que_chat.backend.models.message import Message
+from que_chat.database import Base, engine
+
+from que_chat.config import settings
 
 from typing import List
 import asyncio
@@ -14,6 +20,14 @@ import uvicorn
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+    await engine.dispose()
 
 
 class ConnectionManager:
@@ -61,6 +75,16 @@ app = FastAPI(
     title="QueChat",
     description="QueChat - your own message!",
     version="0.1",
+    lifespan=lifespan,
+)
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
@@ -72,18 +96,22 @@ async def read_root():
 @app.post("/messages", response_model=message.Message)
 async def create_message(
     message_sch: message.MessageCreate,
-    db: sessionDep,
+    session: sessionDep,
 ):
     try:
+        timestamp = message_sch.timestamp
+        if timestamp is None:
+            timestamp = datetime.utcnow()
+        
         new_message = Message(
-            sender=message_sch.username,
+            username=message_sch.username,
             text=message_sch.text,
-            timestamp=message_sch.timestamp,
+            timestamp=timestamp,
         )
 
-        db.add(new_message)
-        await db.commit()
-        await db.refresh(new_message)
+        session.add(new_message)
+        await session.commit()
+        await session.refresh(new_message)
 
         logger.info(
             f"Новое сообщение от: {message_sch.username} - {message_sch.text[:50]}"
@@ -96,20 +124,46 @@ async def create_message(
                     "id": new_message.id,
                     "username": new_message.username,
                     "text": new_message.text,
-                    "timestamp": new_message.timestamp.isoformat(),
+                    "timestamp": new_message.timestamp.isoformat() if new_message.timestamp else None,
+                    "is_deleted": new_message.is_deleted,
                 },
             }
         )
         return new_message
 
     except Exception as e:
-        await db.rollback()
+        await session.rollback()
         logger.error(f"Ошибка создания сообщения: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e),
         )
 
+
+@app.get("/messages/history")
+async def get_message_history(
+    session: sessionDep,
+    limit: int = 50,
+):
+    try:
+        stmt = select(Message).order_by(desc(Message.timestamp)).limit(limit)
+        result = await session.execute(stmt)
+        messages = result.scalars().all()   
+        
+        history = []
+        for msg in reversed(messages):
+            history.append({
+                "id": msg.id,
+                "username": msg.username,
+                "text": msg.text,
+                "timestamp": msg.timestamp.isoformat() if msg.timestamp else None,
+                "is_deleted": msg.is_deleted,
+            })
+
+        return history
+    except Exception as e:
+        logger.error(f"ERROR! - {e}")
+        return []
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -129,8 +183,8 @@ async def websocket_endpoint(websocket: WebSocket):
 if __name__ == "__main__":
     uvicorn.run(
         app="master:app",
-        host=f"{int(settings.fast.host)}",
-        port=f"{int(settings.fast.port)}",
+        host=f"{settings.fast.host}",
+        port=int(settings.fast.port),
         reload=True,
         log_level="info",
     )

@@ -1,39 +1,29 @@
-// script.js - Полная версия с историей из БД
+const WS_URL = "ws://localhost:8000/ws";
+const API_URL = "http://localhost:8000/messages";
 
-// Конфигурация WebSocket
-const WS_URL = `ws://localhost:8000/ws`;
-const API_URL = `http://localhost:8000/messages`;
+const messageHistory = document.getElementById("messageHistory");
+const messageInput = document.getElementById("messageInput");
+const sendBtn = document.getElementById("sendBtn");
+const channelTitle = document.querySelector(".channel_title")
 
-// DOM элементы
-const messageHistory = document.getElementById('messageHistory');
-const messageInput = document.getElementById('messageInput');
-const sendBtn = document.getElementById('sendBtn');
-const channelTitle = document.querySelector('.channel_title');
-const channelAvatar = document.querySelector('.channel_avatar');
-
-// Состояние приложения
 let socket = null;
 let isConnected = false;
-let reconnectAttempts = 0;
+let reconnect_attempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 5;
-const RECONNECT_DELAY = 3000;
+const RECONNECT_DELAY = 5000;
 
-// Хранилище ID отображенных сообщений для предотвращения дубликатов
-let displayedMessageIds = new Set();
+let messageIds = new Set();
 
-// Имя пользователя
-let USERNAME = '';
-
-// --- Управление пользователями ---
+let USERNAME = "";
 
 function getUsername() {
-    let savedUsername = localStorage.getItem('quechat_username');
-    
+    let savedUsername = localStorage.getItem("quechat_username");
+
     if (savedUsername) {
         return savedUsername;
     }
-    
-    const newUsername = prompt('Введите ваше имя для чата:', `User_${Math.floor(Math.random() * 10000)}`);
+
+    const newUsername = prompt("Your username:", `User_${Math.floor(Math.random() * 10000)}`);
     if (newUsername && newUsername.trim()) {
         return newUsername.trim();
     }
@@ -43,239 +33,206 @@ function getUsername() {
 function setUsername(newUsername) {
     if (newUsername && newUsername.trim()) {
         USERNAME = newUsername.trim();
-        localStorage.setItem('quechat_username', USERNAME);
-        updateUserInterface();
-        showNotification(`Имя изменено на: ${USERNAME}`, 'info');
+        localStorage.setItem("quechat_username", USERNAME);
+        updateUserInterface();    
     }
 }
 
 function updateUserInterface() {
-    if (channelAvatar) {
-        channelAvatar.textContent = USERNAME.substring(0, 1).toUpperCase();
-    }
     if (channelTitle) {
-        channelTitle.textContent = `QueChat - ${USERNAME}`;
+        channelTitle.textContent = "QueChat"
     }
 }
 
-// Инициализация имени пользователя
-USERNAME = getUsername();
-
-// --- Управление WebSocket ---
-
 function initWebSocket() {
     try {
-        socket = new WebSocket(WS_URL);
-        
+        socket = new WebSocket(WS_URL),
+
         socket.onopen = handleWebSocketOpen;
         socket.onmessage = handleWebSocketMessage;
         socket.onclose = handleWebSocketClose;
         socket.onerror = handleWebSocketError;
-        
-        updateConnectionStatus('Подключение...');
+
+        updateConnectionStatus("Connection...")
     } catch (error) {
-        console.error('Ошибка при создании WebSocket:', error);
-        attemptReconnect();
+        console.log(`Error connection - ${error}`)
+        attemptReconnect()
     }
 }
 
 function handleWebSocketOpen(event) {
-    console.log('WebSocket подключен');
+    console.log("Connection - Great!");
     isConnected = true;
-    reconnectAttempts = 0;
-    updateConnectionStatus('Подключено');
-    channelTitle.textContent = `QueChat - ${USERNAME}`;
-    channelAvatar.style.backgroundColor = '#4CAF50';
+    reconnect_attempts = 0;    
 }
 
 function handleWebSocketMessage(event) {
     try {
-        const data = JSON.parse(event.data);
-        console.log('Получено сообщение:', data);
-        
-        if (data.type === 'new_message') {
-            // Проверяем, не отображали ли уже это сообщение
-            if (data.message.id && !displayedMessageIds.has(data.message.id)) {
+        const data = JSON.parse(event.data)
+        console.log("New message!")
+
+        if (data.type === "new_message") {
+            if (data.message.id && !messageIds.has(data.message.id)) {
                 displayMessage(data.message);
             }
         }
     } catch (error) {
-        console.error('Ошибка при обработке сообщения:', error);
+        console.log(`ERROR - ${error}`)
     }
 }
 
-function handleWebSocketClose(event) {
-    console.log('WebSocket закрыт:', event.code, event.reason);
+function handleWebSocketOnClose(event) {
     isConnected = false;
-    updateConnectionStatus('Отключено');
-    channelTitle.textContent = 'Оффлайн';
-    channelAvatar.style.backgroundColor = '#f44336';
     attemptReconnect();
 }
 
-function handleWebSocketError(error) {
-    console.error('Ошибка WebSocket:', error);
-    updateConnectionStatus('Ошибка соединения');
+function handleWebSocketOnError(error) {
+    console.log(`ERROR - ${error}`)
 }
 
 function attemptReconnect() {
-    if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
-        reconnectAttempts++;
-        console.log(`Попытка переподключения ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}`);
-        updateConnectionStatus(`Переподключение... ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}`);
+    if (reconnect_attempts < MAX_RECONNECT_ATTEMPTS) {
+        reconnect_attempts++;
+        console.log(`Attempt includes: ${reconnect_attempts}/${MAX_RECONNECT_ATTEMPTS}`)
+        updateConnectionStatus(`Reinclude: ${reconnect_attempts}/${MAX_RECONNECT_ATTEMPTS}`)
         
         setTimeout(() => {
             if (!isConnected) {
                 initWebSocket();
             }
         }, RECONNECT_DELAY);
-    } else {
-        console.error('Максимальное количество попыток переподключения достигнуто');
-        updateConnectionStatus('Не удалось подключиться');
-    }
+   } else {
+        console.error("Max count includes (limit)");
+        updateConnectionStatus("Error include");
+   }
 }
 
 function updateConnectionStatus(status) {
-    console.log('Статус соединения:', status);
+    console.log(`Status includes: ${status}`)
 }
 
-// --- Управление сообщениями ---
+USERNAME = getUsername();
 
 function clearMessageHistory() {
-    messageHistory.innerHTML = '';
-    displayedMessageIds.clear();
+    messageHistory.innerHTML = "";
+    messageIds.clear();
 }
 
 function displayMessage(message) {
-    // Проверяем, не отображали ли уже это сообщение
-    if (message.id && displayedMessageIds.has(message.id)) {
-        console.log('⚠️ Дубликат сообщения, пропускаем:', message.id);
+    if (message.id && messageIds.has(message.id)) {
+        console.log(`Duplicate detected. Skip - ${message.id}`)
         return;
     }
-    
-    // Сохраняем ID сообщения
+
     if (message.id) {
-        displayedMessageIds.add(message.id);
+        messageIds.add(message.id);
     }
-    
+
     const messageElement = createMessageElement(message);
     messageHistory.appendChild(messageElement);
     scrollToBottom();
 }
 
 function createMessageElement(message) {
-    const messageDiv = document.createElement('div');
-    
+    const messageDiv = document.createElement("div");
+
     const isOwnMessage = message.username === USERNAME;
-    messageDiv.className = isOwnMessage ? 'message_send' : 'message_received';
-    
-    // Никнейм
-    const nicknameDiv = document.createElement('div');
-    nicknameDiv.className = 'nickname';
-    nicknameDiv.textContent = message.username || 'Аноним';
-    
-    // Текст сообщения
-    const messageContentDiv = document.createElement('div');
-    messageContentDiv.className = 'message';
-    messageContentDiv.textContent = message.text || '';
-    
-    // Время
-    const timeDiv = document.createElement('div');
-    timeDiv.className = 'message-time';
-    timeDiv.style.cssText = 'font-size: 10px; color: #6A6F7D; margin-top: 4px;';
+    messageDiv.className = isOwnMessage ? "message_send" : "message_received"
+
+    const nicknameDiv = document.createElement("div");
+    nicknameDiv.className = "nickname";
+    nicknameDiv.textContent = message.username || "Anonim";
+
+    const messageContentDiv = document.createElement("div");
+    messageContentDiv.className = "message";
+    messageContentDiv.textContent = message.text || "";
+
+    const timeDiv = document.createElement("div");
+    timeDiv.className = "message-time";
+    timeDiv.style.cssText = "font-size: 10px; color: #000000; margin-top: 4px;";
     if (message.timestamp) {
-        const date = new Date(message.timestamp);
-        timeDiv.textContent = date.toLocaleTimeString('ru-RU', { 
-            hour: '2-digit', 
-            minute: '2-digit' 
+        const date = new Date(message.timestamp)
+        timeDiv.textContent = date.toLocaleTimeString("ru-RU", {
+            hour: "2-digit",
+            minute: "2-digit"
         });
     }
-    
+
     messageDiv.appendChild(nicknameDiv);
     messageDiv.appendChild(messageContentDiv);
     messageDiv.appendChild(timeDiv);
-    
-    messageDiv.style.animation = 'fadeIn 0.3s ease-in';
-    
+
+    messageDiv.style.animation = "fadeIn 0.3s ease-in";
+
     return messageDiv;
 }
 
-// --- Загрузка истории из базы данных ---
-
 async function loadMessageHistory() {
     try {
-        console.log('📥 Загрузка истории сообщений из БД...');
-        
-        // Запрос к API для получения истории
+        console.log("Load message history in database...");
+
         const response = await fetch(`${API_URL}/history`);
-        
+
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            throw new Error(`HTTP error! Status: ${response.status}`)
         }
-        
-        const historyMessages = await response.json();
-        console.log(`✅ Загружено ${historyMessages.length} сообщений из БД`);
-        
-        // Очищаем историю перед загрузкой
+
+        const historyMessage = await response.json()
+        console.log(`Load is success: ${historyMessage.length}`)
+
         clearMessageHistory();
-        
-        // Отображаем все сообщения из истории
-        if (historyMessages.length > 0) {
-            historyMessages.forEach(message => {
+
+        if (historyMessage.length > 0) {
+            historyMessage.forEach(message => {
                 displayMessage(message);
             });
         } else {
-            // Если сообщений нет, показываем приветствие
+
             const welcomeMessage = {
-                id: 'welcome',
-                username: 'Система',
+                id: "Welcome",
+                username: "System",
                 text: `Добро пожаловать в QueChat, ${USERNAME}!`,
                 timestamp: new Date().toISOString()
             };
             displayMessage(welcomeMessage);
         }
-        
-        // Прокручиваем вниз после загрузки
+
         scrollToBottom();
-        
-    } catch (error) {
-        console.error('❌ Ошибка при загрузке истории:', error);
-        
-        // При ошибке показываем приветствие
+
+   } catch (error) {
+        console.error(`Error load history: ${error}`)
+
         const welcomeMessage = {
-            id: 'welcome',
-            username: 'Система',
-            text: `Добро пожаловать в QueChat, ${USERNAME}! (История недоступна)`,
+            id: "Welcome",
+            username: "System",
+            text: `Добро пожаловать в QueChat, ${USERNAME}!`,
             timestamp: new Date().toISOString()
         };
         displayMessage(welcomeMessage);
-    }
+   }
 }
-
-// --- Отправка сообщений ---
 
 async function sendMessage() {
     const text = messageInput.value.trim();
-    
+
     if (!text) {
         messageInput.focus();
-        return;
+        return
     }
-    
+
     if (!isConnected || !socket || socket.readyState !== WebSocket.OPEN) {
-        showNotification('Нет подключения к серверу. Сообщение не отправлено.', 'error');
+        showNotification("Not includs on server...");
         return;
     }
-    
-    // Очищаем поле ввода
-    messageInput.value = '';
+
+    messageInput.value = "";
     messageInput.focus();
-    
+
     try {
         const response = await fetch(API_URL, {
-            method: 'POST',
+            method: "POST",
             headers: {
-                'Content-Type': 'application/json',
+                "Content-Type": "application/json",
             },
             body: JSON.stringify({
                 username: USERNAME,
@@ -283,32 +240,27 @@ async function sendMessage() {
                 timestamp: new Date().toISOString()
             })
         });
-        
+
         if (!response.ok) {
             const errorData = await response.json();
-            console.error('Ошибка валидации:', errorData);
-            
-            let errorMessage = 'Ошибка при отправке';
+            console.error(`Error validatioin: ${errorData}`);
+
+            let errorMessage = "Error send";
             if (errorData.detail) {
                 if (Array.isArray(errorData.detail)) {
-                    errorMessage = errorData.detail.map(e => e.msg).join(', ');
+                    errorMessage = errorData.detail.map(e => e.msg).join(", ");
                 } else {
                     errorMessage = errorData.detail;
                 }
             }
-            showNotification(errorMessage, 'error');
+            showNotification(errorMessage, "error");
             return;
         }
-        
-        console.log('✅ Сообщение отправлено и сохранено в БД');
-        
     } catch (error) {
-        console.error('Ошибка при отправке сообщения:', error);
-        showNotification('Ошибка при отправке сообщения. Попробуйте снова.', 'error');
+        console.error(`Error send message: ${error}`);
+        showNotification("Error send message. Try again.", "error");
     }
 }
-
-// --- Вспомогательные функции ---
 
 function scrollToBottom() {
     setTimeout(() => {
@@ -316,7 +268,7 @@ function scrollToBottom() {
     }, 100);
 }
 
-function showNotification(message, type = 'info') {
+function showNotification(message, type = "info") {
     const notification = document.createElement('div');
     notification.style.cssText = `
         position: fixed;
@@ -372,6 +324,7 @@ function addAnimationStyles() {
         .message_send {
             background-color: #4A90E2;
             color: white;
+            margin: 5px 25px 0px 0px;
             align-self: flex-end;
             border-bottom-right-radius: 4px;
         }
@@ -387,9 +340,9 @@ function addAnimationStyles() {
         .nickname {
             display: flex;
             justify-content: start;
-            color: #6A6F7D;
+            color: #9a9ea9;
             flex-shrink: 0;
-            padding: 5px;
+            padding: 0px 0px 10px 0px;
             font-size: 12px;
         }
         
@@ -406,44 +359,24 @@ function addAnimationStyles() {
     document.head.appendChild(styleSheet);
 }
 
-// --- Обработчики событий ---
+function setupEventListeners () {
+    sendBtn.addEventListener("click", sendMessage);
 
-function setupEventListeners() {
-    sendBtn.addEventListener('click', sendMessage);
-    
-    messageInput.addEventListener('keypress', (event) => {
-        if (event.key === 'Enter' && !event.shiftKey) {
+    messageInput.addEventListener("keypress", (event) => {
+        if (event.key === "Enter" && !event.shiftKey) {
             event.preventDefault();
             sendMessage();
         }
     });
     
-    messageInput.addEventListener('focus', () => {
-        messageInput.style.backgroundColor = '#323640';
+    messageInput.addEventListener("focus", () => {
+        messageInput.style.backgroundColor = "#323640";
     });
-    
-    messageInput.addEventListener('blur', () => {
-        messageInput.style.backgroundColor = '#2A2D36';
+
+    messageInput.addEventListener("blur", () => {
+        messageInput.style.backgroundColor = "2A2D36";
     });
-    
-    window.addEventListener('online', () => {
-        console.log('Интернет появился');
-        if (!isConnected) {
-            attemptReconnect();
-        }
-    });
-    
-    window.addEventListener('offline', () => {
-        console.log('Интернет пропал');
-        updateConnectionStatus('Нет интернета');
-    });
-    
-    channelAvatar.addEventListener('dblclick', () => {
-        const newUsername = prompt('Введите новое имя пользователя:', USERNAME);
-        if (newUsername && newUsername.trim()) {
-            setUsername(newUsername.trim());
-        }
-    });
+
 }
 
 function checkWebSocketStatus() {
@@ -457,27 +390,21 @@ function checkWebSocketStatus() {
     }
 }
 
-// --- Инициализация ---
-
 function initApp() {
-    console.log('🚀 Инициализация QueChat...');
-    
+
     updateUserInterface();
     addAnimationStyles();
     setupEventListeners();
-    
-    // Загружаем историю из БД
+
     loadMessageHistory();
-    
-    // Инициализируем WebSocket
+
     initWebSocket();
-    
+
     setInterval(checkWebSocketStatus, 5000);
 }
 
-document.addEventListener('DOMContentLoaded', initApp);
+document.addEventListener("DOMContentLoaded", initApp);
 
-// Экспорт для тестирования
 window.QueChat = {
     sendMessage,
     initWebSocket,

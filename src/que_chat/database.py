@@ -1,20 +1,29 @@
+import os
+
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine, AsyncSession
 from typing import Annotated
 
-from config import settings
+from que_chat.config import settings
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 class Base(DeclarativeBase):
     pass
 
 
+database_url = str(settings.db.engine)
+
 engine = create_async_engine(
-    f"postgres+psycopg://"
-    f"{settings.db.login}:{settings.db.password}"
-    f"@{settings.db.host}:{settings.db.port}/QueChatDB"
+    url=database_url,
+    echo=settings.db.echo,
 )
-async_session = async_sessionmaker(bind=engine, expire_on_commit=False)
+async_session = async_sessionmaker(
+    bind=engine,
+    expire_on_commit=settings.db.eoc,
+)
 
 
 async def get_db():

@@ -1,4 +1,6 @@
-from sqlalchemy import Integer, String
+from datetime import datetime
+
+from sqlalchemy import Integer, String, DateTime
 from sqlalchemy.orm import mapped_column, Mapped
 
 from que_chat.database import Base
@@ -10,6 +12,6 @@ class User(Base):
     id: Mapped[int] = mapped_column(
         Integer, primary_key=True, autoincrement=True, index=True
     )
-    nickname: Mapped[str] = mapped_column(String, default="ghost")
-
+    username: Mapped[str] = mapped_column(String, default="ghost")
+    timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     # role: Mapped[str] = mapped_column(String, default="User")

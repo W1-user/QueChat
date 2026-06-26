@@ -185,6 +185,6 @@ if __name__ == "__main__":
         app="master:app",
         host=f"{settings.fast.host}",
         port=int(settings.fast.port),
-        reload=True,
+        # reload=True,
         log_level="info",
     )

@@ -4,7 +4,7 @@ from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine, AsyncSession
 from typing import Annotated
 
-from config import settings
+from que_chat.config import settings
 from dotenv import load_dotenv
 
 load_dotenv()

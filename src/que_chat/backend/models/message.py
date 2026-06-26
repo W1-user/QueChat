@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from sqlalchemy import Integer, String, Boolean, DateTime, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from que_chat.database import Base
+from database import Base
 
 
 class Message(Base):

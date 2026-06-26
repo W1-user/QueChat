@@ -1,7 +1,7 @@
 from sqlalchemy import Integer, String
 from sqlalchemy.orm import mapped_column, Mapped
 
-from que_chat.database import Base
+from database import Base
 
 
 class User(Base):

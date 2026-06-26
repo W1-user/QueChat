@@ -4,13 +4,13 @@ from datetime import datetime
 from fastapi import FastAPI, HTTPException, status, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import desc, select
-from que_chat.backend.schemas import message
-from que_chat.backend.dependencies import sessionDep
-from que_chat.backend.models.user import User
-from que_chat.backend.models.message import Message
-from que_chat.database import Base, engine
+from backend.schemas import message
+from backend.dependencies import sessionDep
+from backend.models.user import User
+from backend.models.message import Message
+from database import Base, engine
 
-from que_chat.config import settings
+from config import settings
 
 from typing import List
 import asyncio

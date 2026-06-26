@@ -8,17 +8,16 @@ from dotenv import load_dotenv
 
 load_dotenv()
 class DatabaseSettings(BaseModel):
-    login = os.getenv("LOGIN")
-    password = os.getenv("PASSWORD")
-    host = os.getenv("HOST")
-    port = os.getenv("PORT")
+    engine: Optional[str] = os.getenv("ENGINE")
+    echo: Optional[bool] = True
+    eoc: Optional[bool] = False
 
 class FastApiSettings(BaseModel):
-    host = os.getenv("HOST")
-    port = os.getenv("PORT")
+    host: Optional[str] = os.getenv("HOST")
+    port: Optional[int] = os.getenv("PORT")
 
 class Settings(BaseSettings):
-    db = DatabaseSettings() = DatabaseSettings
-    fast = FastApiSettings() = FastApiSettings
+    db: DatabaseSettings = DatabaseSettings()
+    fast: FastApiSettings = FastApiSettings()
 
 settings = Settings()

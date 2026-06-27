@@ -7,6 +7,7 @@ const sendBtn = document.getElementById("sendBtn");
 const channelTitle = document.querySelector(".channel_title")
 const usernameInput = document.getElementById("usernameInput")
 const sendUsername = document.getElementById("sendUsername")
+const passwordInput = document.getElementById("passwordInput")
 
 let socket = null;
 let isConnected = false;
@@ -17,6 +18,7 @@ const RECONNECT_DELAY = 5000;
 let messageIds = new Set();
 
 let USERNAME = "";
+let PASSWORD = "";
 
 function getUsername() {
     let savedUsername = localStorage.getItem("quechat_username");
@@ -28,13 +30,50 @@ function getUsername() {
     return `User_${Math.floor(Math.random() * 10000)}`;
 }
 
-async function setUsername(newUsername) {
+async function checkExistingUser(username) {
+    try {
+        const response = await fetch(`${API_URL}/profile/check/${username}`)
 
-    if (newUsername && newUsername.trim()) {
+        if (response.ok) {
+            const data = await response.json();
+            return data.exists
+        }
+        return false
+    } catch (error) {
+        console.log(`ERROR - ${error}`)
+        return false
+    }
+}
+
+async function setUsername(newUsername, password) {
+
+    if (newUsername && newUsername.trim() && password && password.trim()) {
         USERNAME = newUsername.trim();
+        PASSWORD = password.trim()
         localStorage.setItem("quechat_username", USERNAME);
         try {
-            const response = await fetch(`${API_URL}/profile/create/${newUsername}`, {
+            exists = await checkExistingUser(USERNAME);
+            if (exists) {
+                const response = await fetch(`${API_URL}/profile/login/${USERNAME}/${PASSWORD}`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`)
+                };
+
+                saveAuthState(USERNAME, PASSWORD);
+                
+                updateUserInterface();
+                showNotification(`Добро пожаловать, ${USERNAME}!`, "info");
+                showUsernameDisplay();
+                return;
+            }
+
+            const response = await fetch(`${API_URL}/profile/create/${USERNAME}/${PASSWORD}`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
@@ -43,9 +82,12 @@ async function setUsername(newUsername) {
 
             if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`)
-            }
-            updateUserInterface();  
-            showNotification(`Имя пользователя изменено на: ${USERNAME}`, "info");
+            };
+
+            saveAuthState(USERNAME, PASSWORD);
+
+            updateUserInterface();
+            showNotification(`Успешная регистрация, ${USERNAME}!`, "info");
             showUsernameDisplay();
 
         } catch (error) {
@@ -55,8 +97,26 @@ async function setUsername(newUsername) {
     }
 }
 
+function saveAuthState(username, password) {
+    localStorage.setItem("quechat_username", username);
+    localStorage.setItem("quechat_password", password);
+    localStorage.setItem("quechat_authenticated", "true");
+}
+
+// function clearAuthState() {
+//     localStorage.removeItem("quechat_username");
+//     localStorage.removeItem("quechat_password");
+//     localStorage.removeItem("quechat_authenticated");
+// }
+
+function isAuthenticated() {
+    return localStorage.getItem("quechat_authenticated") === "true";
+}
+
 function showUsernameDisplay() {
+
     usernameInput.style.display = "none";
+    passwordInput.style.display = "none";
     sendUsername.style.display = "none";
 
     const oldDisplay = document.getElementById("usernameDisplay");
@@ -68,7 +128,6 @@ function showUsernameDisplay() {
     const usernameDisplay = document.createElement("div");
 
     usernameDisplay.id = "usernameDisplay";
-    usernameDisplay.textContent = USERNAME;
     usernameDisplay.style.cssText = `
         display: flex;
         align-items: center;
@@ -111,6 +170,7 @@ function showUsernameDisplay() {
 
     changeBtn.onclick = function() {
         usernameInput.style.display = "block";
+        passwordInput.style.display = "block";
         sendUsername.style.display = "block";
 
         usernameInput.value = USERNAME;
@@ -455,8 +515,9 @@ function setupEventListeners () {
     sendBtn.addEventListener("click", sendMessage);
     sendUsername.addEventListener("click", function () {
         let newUsername = usernameInput.value.trim()
-        if (newUsername) {
-            setUsername(newUsername);
+        let newPassword = passwordInput.value.trim()
+        if (newUsername && newPassword) {
+            setUsername(newUsername, newPassword);
         } else {
             showNotification("Введите имя пользователя!", "error");
         }
@@ -472,9 +533,10 @@ function setupEventListeners () {
     usernameInput.addEventListener("keypress", (event) => {
         if (event.key === "Enter" && !event.shiftKey) {
             let newUsername = usernameInput.value.trim()
+            let newPassword = passwordInput.value.trim()
             event.preventDefault();
-            if (newUsername) {
-                setUsername(newUsername);
+            if (newUsername && newPassword) {
+                setUsername(newUsername, newPassword);
             } else {
                 showNotification("Введите имя пользователя!", "error");
             }
@@ -516,22 +578,37 @@ function initApp() {
     addAnimationStyles();
     setupEventListeners();
 
-    loadMessageHistory();
+    const savedUsername = localStorage.getItem("quechat_username");
+    const savedPassword = localStorage.getItem("quechat_password");
+    const isAuth = isAuthenticated();
+
+    if (savedUsername && savedPassword && isAuth) {
+        USERNAME = savedUsername;
+        PASSWORD = savedPassword;
+
+        showUsernameDisplay();
+        loadMessageHistory();
+    } else {
+        usernameInput.style.display = "block";
+        passwordInput.style.display = "block";
+        sendUsername.style.display = "block";
+
+        loadMessageHistory();
+    }
 
     initWebSocket();
-
     setInterval(checkWebSocketStatus, 5000);
 }
 
 document.addEventListener("DOMContentLoaded", initApp);
 
-window.QueChat = {
-    sendMessage,
-    initWebSocket,
-    displayMessage,
-    USERNAME,
-    setUsername,
-    getUsername,
-    clearMessageHistory,
-    loadMessageHistory
-};
+// window.QueChat = {
+//     sendMessage,
+//     initWebSocket,
+//     displayMessage,
+//     USERNAME,
+//     setUsername,
+//     getUsername,
+//     clearMessageHistory,
+//     loadMessageHistory
+// };

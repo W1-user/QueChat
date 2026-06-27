@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Integer, String, DateTime
+from sqlalchemy import Integer, String, DateTime, Boolean
 from sqlalchemy.orm import mapped_column, Mapped
 
 from que_chat.database import Base
@@ -13,5 +13,8 @@ class User(Base):
         Integer, primary_key=True, autoincrement=True, index=True
     )
     username: Mapped[str] = mapped_column(String, default="ghost")
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     # role: Mapped[str] = mapped_column(String, default="User")
+
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
